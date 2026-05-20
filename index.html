@@ -645,7 +645,11 @@ canvas{max-height:200px}
           </div>
           <button class="step-btn" onclick="stepVal('spo2Val',1,50,100)">＋</button>
         </div>
+        <div style="margin-top:6px;font-size:12px;color:var(--mu);line-height:1.6">
+          ≥95% 正常　90–94% 需注意　&lt;90% 嚴重低氧
+        </div>
       </div>
+      <div class="g4warn" id="spo2Urgent" style="display:none;border-radius:10px;padding:11px 14px;font-size:14px;font-weight:600;line-height:1.5;grid-column:span 1"></div>
       <!-- 體重 -->
       <div class="vcell">
         <div class="vlbl">⚖️ 體重</div>
@@ -1539,8 +1543,25 @@ function evalVitals(){
 
   const spo2St = document.getElementById('spo2St');
   if(isNaN(spo2)){ spo2St.className='vst st-hide'; }
-  else if(spo2<95){ spo2St.className='vst st-danger'; spo2St.textContent='⚠️ 偏低'; }
+  else if(spo2<90){ spo2St.className='vst st-danger'; spo2St.textContent='🚨 嚴重低氧'; }
+  else if(spo2<95){ spo2St.className='vst st-warn';   spo2St.textContent='⚠️ 需要注意'; }
   else { spo2St.className='vst st-ok'; spo2St.textContent='正常'; }
+
+  // 血氧獨立大警示（顯示在詳細記錄頁面）
+  const spo2Warn = document.getElementById('spo2Urgent');
+  if(spo2Warn){
+    if(!isNaN(spo2) && spo2<90){
+      spo2Warn.innerHTML='<strong>🚨 嚴重低氧（SpO₂ '+spo2+'%）</strong><br>血氧低於 90%，需立即就醫評估，可能需要氧氣治療。';
+      spo2Warn.style.display='block';
+      spo2Warn.style.background='#7f1d1d'; spo2Warn.style.color='#fff'; spo2Warn.style.borderColor='#fca5a5';
+    } else if(!isNaN(spo2) && spo2<95){
+      spo2Warn.innerHTML='<strong>⚠️ 血氧偏低（SpO₂ '+spo2+'%）</strong><br>血氧低於 95%，請告知醫護人員，並留意是否有喘氣、呼吸費力等症狀。';
+      spo2Warn.style.display='block';
+      spo2Warn.style.background='var(--dangerl)'; spo2Warn.style.color='var(--danger)'; spo2Warn.style.borderColor='var(--danger)';
+    } else {
+      spo2Warn.style.display='none';
+    }
+  }
 
   // Aggregate warning banners
   const urgentMsgs = [];
@@ -1566,7 +1587,8 @@ function evalVitals(){
       mildMsgs.push('🩸 血壓 '+sLabel+'/'+dLabel+' mmHg（偏高）');
   }
   if(!isNaN(spo2)){
-    if(spo2<95) urgentMsgs.push('💧 血氧 '+spo2+'%（偏低）');
+    if(spo2<90) urgentMsgs.push('💧 血氧 '+spo2+'%（嚴重低氧）');
+    else if(spo2<95) urgentMsgs.push('💧 血氧 '+spo2+'%（偏低）');
   }
 
   const uw = document.getElementById('vitalWarn');
@@ -2749,6 +2771,11 @@ function showSummary(){
   if(feverCount>0) alerts.push(`🌡️ 發燒（≥38°C）共出現 <strong>${feverCount}</strong> 次`);
   if(maxNRS!=null&&maxNRS>=7) alerts.push(`💢 疼痛最高達 <strong>NRS ${maxNRS}</strong>（重度以上）`);
   highSyms.forEach(s=>alerts.push(`${s.icon} ${s.name} 曾達 <strong>${gradeLabel[s.grade]}</strong>`));
+  // 血氧異常
+  const spo2Vals=sorted.map(r=>r.spo2?parseFloat(r.spo2):null).filter(v=>v!=null);
+  const minSpo2=spo2Vals.length?Math.min(...spo2Vals):null;
+  if(minSpo2!=null&&minSpo2<90) alerts.push(`💧 血氧最低 <strong>${minSpo2}%</strong>（嚴重低氧，需就醫）`);
+  else if(minSpo2!=null&&minSpo2<95) alerts.push(`💧 血氧最低 <strong>${minSpo2}%</strong>（低於 95%，需告知醫護）`);
 
   const alertHtml=alerts.length?`
     <div style="background:#fff5f5;border:2px solid #dc2626;border-radius:10px;padding:12px 14px;margin-bottom:14px">
@@ -2784,6 +2811,7 @@ function showSummary(){
     </div>
     ${alertHtml}
     ${row('🌡️','體溫',maxTemp!=null?`最高 ${maxTemp}°C　${feverCount?'⚠️ 發燒 '+feverCount+' 次':'未發燒'}`:'未記錄')}
+    ${row('💧','血氧 SpO₂',minSpo2!=null?`最低 ${minSpo2}%　${minSpo2<90?'🚨 嚴重低氧':minSpo2<95?'⚠️ 偏低':'正常'}`:'未記錄')}
     ${row('💢','疼痛 NRS',maxNRS!=null?`最高 NRS ${maxNRS} / 10`:'未記錄',
         painLocs.length?'部位：'+painLocs.join('、'):''
     )}
