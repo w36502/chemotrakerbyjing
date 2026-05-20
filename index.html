@@ -51,9 +51,9 @@ body{font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--tx);
     gap:6px !important; box-shadow:0 4px 18px rgba(26,111,181,.45) !important;
   }
 
-  /* 內容區域 */
-  .scroll{ max-width:900px; margin:0 auto; }
-  .panel{ padding:20px 24px; }
+  /* 電腦版：隱藏頂部 tabs，只用底部導覽 */
+  #tabsBar{ display:none !important; }
+  .scroll{ padding-top:20px; max-width:900px; margin:0 auto; }
 
   /* 桌面版多欄佈局 */
   #panel-form .sgrid{ grid-template-columns:repeat(4,1fr); }
@@ -1948,20 +1948,30 @@ function renderHistory(){
 
     // 生命徵象：所有這天的紀錄，每筆顯示一行（有值才顯示）
     const vitalsRows = entries.map(({r,i})=>{
-      const tc = r.temp&&parseFloat(r.temp)>=38?'danger':'';
       const time = new Date(r.ts).toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit'});
+      // 顏色判斷
+      const tempV = r.temp ? parseFloat(r.temp) : null;
+      const hrV   = r.hr   ? parseFloat(r.hr)   : null;
+      const spo2V = r.spo2 ? parseFloat(r.spo2) : null;
+      const sysV  = r.bpS  ? parseFloat(r.bpS)  : null;
+      const diaV  = r.bpD  ? parseFloat(r.bpD)  : null;
+
+      const tempC  = tempV!=null && tempV>=38 ? 'danger' : (tempV!=null && tempV<36 ? 'danger' : '');
+      const hrC    = hrV!=null && (hrV>100||hrV<60) ? 'danger' : '';
+      const spo2C  = spo2V!=null && spo2V<95 ? (spo2V<90?'danger':'warn') : '';
+      const bpC    = (sysV!=null&&(sysV>=140||sysV<90))||(diaV!=null&&(diaV>=90||diaV<60)) ? 'danger' : '';
+
       const items = [
-        r.temp ? `<span class="hvi"><span class="hvlbl">體溫</span><span class="hvval ${tc}">${r.temp}°C</span></span>` : '',
-        r.hr   ? `<span class="hvi"><span class="hvlbl">心跳</span><span class="hvval">${r.hr}bpm</span></span>` : '',
-        (r.bpS&&r.bpD) ? `<span class="hvi"><span class="hvlbl">血壓</span><span class="hvval">${r.bpS}/${r.bpD}</span></span>` : '',
-        r.spo2 ? `<span class="hvi"><span class="hvlbl">血氧</span><span class="hvval">${r.spo2}%</span></span>` : '',
+        tempV!=null ? `<span class="hvi"><span class="hvlbl">體溫</span><span class="hvval ${tempC}">${r.temp}°C${tempV>=38?' 🌡️':''}</span></span>` : '',
+        hrV!=null   ? `<span class="hvi"><span class="hvlbl">心跳</span><span class="hvval ${hrC}">${r.hr}bpm${hrC?` ⚠️`:''}</span></span>` : '',
+        (r.bpS&&r.bpD) ? `<span class="hvi"><span class="hvlbl">血壓</span><span class="hvval ${bpC}">${r.bpS}/${r.bpD}${bpC?' ⚠️':''}</span></span>` : '',
+        spo2V!=null ? `<span class="hvi"><span class="hvlbl">血氧</span><span class="hvval ${spo2C}">${r.spo2}%${spo2C?` ⚠️`:''}</span></span>` : '',
         r.weight ? `<span class="hvi"><span class="hvlbl">體重</span><span class="hvval">${parseFloat(r.weight).toFixed(1)}kg</span></span>` : '',
       ].filter(Boolean);
       const nrs = r.nrsVal??r.nrs??null;
       const painE = r.painFaceIdx!=null?PAIN_EMOJIS[r.painFaceIdx]:'';
       const painStr = nrs!=null ? `<span class="hvi"><span class="hvlbl">疼痛</span><span class="hvval" style="color:${NRS_COLORS[nrs]}">${painE} NRS ${nrs}${r.painLocation?' · '+r.painLocation:''}</span></span>` : '';
       if(painStr) items.push(painStr);
-      // 飲水不在每行顯示，改成當日加總
       if(!items.length) return '';
       return `<div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:6px 0;border-bottom:1px solid #eef2f7">
         <span style="font-size:11px;color:var(--mu);font-weight:700;min-width:36px">${time}</span>
@@ -2708,6 +2718,16 @@ function showSummary(){
   const maxTemp=temps.length?Math.max(...temps):null;
   const feverCount=temps.filter(v=>v>=38).length;
 
+  // 心跳
+  const hrVals=sorted.map(r=>parseFloat(r.hr)).filter(v=>!isNaN(v));
+  const maxHR=hrVals.length?Math.max(...hrVals):null;
+  const minHR=hrVals.length?Math.min(...hrVals):null;
+  const hrAbCount=hrVals.filter(v=>v>100||v<60).length;
+
+  // 血壓
+  const sysVals=sorted.map(r=>parseFloat(r.bpS)).filter(v=>!isNaN(v));
+  const maxSys=sysVals.length?Math.max(...sysVals):null;
+
   // 疼痛
   const nrsVals=sorted.map(r=>r.nrsVal??r.nrs??null).filter(v=>v!=null);
   const maxNRS=nrsVals.length?Math.max(...nrsVals):null;
@@ -2769,6 +2789,8 @@ function showSummary(){
   // 警示
   const alerts=[];
   if(feverCount>0) alerts.push(`🌡️ 發燒（≥38°C）共出現 <strong>${feverCount}</strong> 次`);
+  if(hrAbCount>0) alerts.push(`💓 心跳異常（>100或<60 bpm）共出現 <strong>${hrAbCount}</strong> 次，最高 ${maxHR}、最低 ${minHR}`);
+  if(maxSys!=null&&maxSys>=140) alerts.push(`🩸 血壓最高收縮壓 <strong>${maxSys} mmHg</strong>（高血壓）`);
   if(maxNRS!=null&&maxNRS>=7) alerts.push(`💢 疼痛最高達 <strong>NRS ${maxNRS}</strong>（重度以上）`);
   highSyms.forEach(s=>alerts.push(`${s.icon} ${s.name} 曾達 <strong>${gradeLabel[s.grade]}</strong>`));
   // 血氧異常
@@ -2811,6 +2833,7 @@ function showSummary(){
     </div>
     ${alertHtml}
     ${row('🌡️','體溫',maxTemp!=null?`最高 ${maxTemp}°C　${feverCount?'⚠️ 發燒 '+feverCount+' 次':'未發燒'}`:'未記錄')}
+    ${row('💓','心跳',maxHR!=null?`最高 ${maxHR} / 最低 ${minHR} bpm　${hrAbCount?'⚠️ 異常 '+hrAbCount+' 次':''}`:'未記錄')}
     ${row('💧','血氧 SpO₂',minSpo2!=null?`最低 ${minSpo2}%　${minSpo2<90?'🚨 嚴重低氧':minSpo2<95?'⚠️ 偏低':'正常'}`:'未記錄')}
     ${row('💢','疼痛 NRS',maxNRS!=null?`最高 NRS ${maxNRS} / 10`:'未記錄',
         painLocs.length?'部位：'+painLocs.join('、'):''
