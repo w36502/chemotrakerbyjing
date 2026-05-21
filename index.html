@@ -983,17 +983,19 @@ window.onload=()=>{
   renderHistory();
   loadTodayRecord();
   loadDraft();
-  // 飲水量：今天有記錄就加總，隔天自動歸零
+  // 飲水量：從今天的紀錄直接讀取（autoSaveWater 存的是當天總量）
   const todayStr = new Date().toDateString();
-  const todayWater = records
-    .filter(r=>new Date(r.ts).toDateString()===todayStr && r.water>0)
-    .reduce((sum,r)=>sum+r.water, 0);
+  const todayRec = records.find(r=>new Date(r.ts).toDateString()===todayStr);
+  const todayWater = todayRec?.water || 0;
   waterTotal = todayWater;
-  lastSavedWater = todayWater; // 起點設為今天已儲存的加總
+  lastSavedWater = todayWater;
   updateWaterUI();
   updateFloatSave();
   applyLandscapeStyles();
   updateChemoDayDisplay();
+  // 快速記錄頁不需要儲存按鈕，預設隱藏
+  const bar=document.getElementById('floatSaveBar');
+  if(bar) bar.classList.add('hidden');
   if('serviceWorker' in navigator){
     navigator.serviceWorker.register('sw.js').catch(()=>{});
   }
@@ -1031,11 +1033,13 @@ function pickPainFace(i){
   const mid=Math.round((FACE2NRS[i][0]+FACE2NRS[i][1])/2);
   setPain(i,mid);
   updateFloatSave();
+  autoSaveQuick();
 }
 function pickNRS(n){
   hap.select();
   setPain(NRS2FACE(n),n);
   updateFloatSave();
+  autoSaveQuick();
 }
 
 // ─── MOOD ────────────────────────────────────────────────
@@ -1052,9 +1056,62 @@ function pickMood(i){
   moodIdx=i;
   for(let j=0;j<5;j++){const b=document.getElementById('mf'+j);if(b)b.className='mbtn'+(j===i?' ms'+i:'');}
   updateFloatSave();
+  autoSaveQuick();
 }
 
-// ─── INPUT CLAMP (防呆：手動輸入時不觸發範圍限制，只在失焦時修正) ──
+// ─── AUTO-SAVE QUICK RECORD ──────────────────────────────
+// 快速記錄頁：選完就自動寫入，不需按儲存
+function autoSaveQuick(){
+  const today = new Date().toDateString();
+  const todayIdx = records.findIndex(r=>new Date(r.ts).toDateString()===today);
+  const syms = SYMPTOMS.filter(s=>(symGrades[s.id]?.grade??0)>0)
+    .map(s=>({icon:s.icon,name:s.name,grade:symGrades[s.id].grade,note:symGrades[s.id].note||''}));
+  const temp = document.getElementById('tempVal')?.value||'';
+  const painLoc = document.getElementById('painLocation')?.value||'';
+
+  if(todayIdx>=0){
+    // 更新今天的第一筆
+    records[todayIdx].moodIdx = moodIdx;
+    records[todayIdx].syms = syms;
+    records[todayIdx].nrsVal = nrsVal;
+    records[todayIdx].painFaceIdx = painFaceIdx;
+    records[todayIdx].painLocation = painLoc;
+    if(temp) records[todayIdx].temp = temp;
+  } else {
+    // 今天第一次，新增一筆
+    records.unshift({
+      ts: Date.now(),
+      moodIdx, syms,
+      nrsVal, painFaceIdx,
+      painLocation: painLoc,
+      temp, hr:'', bpS:'', bpD:'', spo2:'', weight:'',
+      water:0, diet:'', other:'',
+    });
+    todayRecIdx = 0;
+  }
+  localStorage.setItem('chemoV5', JSON.stringify(records));
+  document.getElementById('histDot').classList.add('show');
+  renderHistory();
+}
+
+// ─── AUTO-SAVE WATER ─────────────────────────────────────
+// 飲水量：直接寫入今天的紀錄，不需按儲存
+function autoSaveWater(){
+  const today = new Date().toDateString();
+  const todayIdx = records.findIndex(r=>new Date(r.ts).toDateString()===today);
+  if(todayIdx>=0){
+    records[todayIdx].water = waterTotal;
+  } else {
+    records.unshift({
+      ts:Date.now(), moodIdx:null, syms:[], nrsVal:null, painFaceIdx:null,
+      painLocation:'', temp:'', hr:'', bpS:'', bpD:'', spo2:'', weight:'',
+      water:waterTotal, diet:'', other:'',
+    });
+    todayRecIdx=0;
+  }
+  localStorage.setItem('chemoV5', JSON.stringify(records));
+  renderHistory();
+}
 // 手動輸入時不 clamp（避免輸入到一半就被強制改值）
 // 只標記警示，失焦(blur)時才修正超出範圍的值
 function clampInput(el, min, max){
@@ -1085,6 +1142,7 @@ function blurClampTemp(el){
   }
   evalVitals();
   saveDraft();
+  if(el.value) autoSaveQuick();
 }
 
 // ─── WEIGHT AUTO-FORMAT ──────────────────────────────────
@@ -1273,16 +1331,18 @@ let lastSavedWater = 0; // 上次儲存時的飲水量
 function addWater(cc){
   hap.select();
   waterTotal = Math.min(waterTotal + cc, 5000);
+  lastSavedWater = waterTotal;
   updateWaterUI();
-  saveDraft();
+  autoSaveWater();
   updateFloatSave();
 }
 
 function resetWater(){
   hap.light();
   waterTotal = 0;
+  lastSavedWater = 0;
   updateWaterUI();
-  saveDraft();
+  autoSaveWater();
 }
 
 function updateWaterUI(){
@@ -1709,7 +1769,7 @@ function switchTab(t){
   document.querySelectorAll('.tab').forEach((b,i)=>
     b.classList.toggle('active',['form','detail','history','report'][i]===t));
   const bar=document.getElementById('floatSaveBar');
-  if(bar) bar.classList.toggle('hidden', t!=='form' && t!=='detail');
+  if(bar) bar.classList.toggle('hidden', t!=='detail');
   if(t==='history'){ renderHistory(); }
   if(t==='report'){ renderChart(); }
 }
@@ -1797,7 +1857,7 @@ function confirmGrade(){
   const grade=parseInt(curGradeEl.dataset.g);
   symGrades[curSym]={grade,note:document.getElementById('gsNote').value};
   hap.success();
-  closeSheet();renderSymptoms();updateEduSummary();updateFloatSave();
+  closeSheet();renderSymptoms();updateEduSummary();updateFloatSave();autoSaveQuick();
   showToast(['已設定無症狀','G1 輕度已記錄','G2 中度已記錄','G3 重度已記錄','G4 危急已記錄'][grade]);
 }
 
@@ -1980,12 +2040,12 @@ function renderHistory(){
       </div>`;
     }).filter(Boolean).join('');
 
-    // 飲水：今天用 waterTotal 變數（正確），過去幾天的舊資料不顯示（避免舊資料亂加總）
-    const isToday = entries.some(({r})=>new Date(r.ts).toDateString()===new Date().toDateString());
-    const totalWater = isToday ? waterTotal : 0;
-    const waterHtml = totalWater>0 ? `<div style="padding:6px 0;border-bottom:1px solid #eef2f7;display:flex;align-items:center;gap:8px">
+    // 飲水：今天用 waterTotal，其他天從第一筆有 water 的記錄取
+    const isToday2 = entries.some(({r})=>new Date(r.ts).toDateString()===new Date().toDateString());
+    const storedWater = isToday2 ? waterTotal : (entries.find(({r})=>r.water>0)?.r.water || 0);
+    const waterHtml = storedWater>0 ? `<div style="padding:6px 0;border-bottom:1px solid #eef2f7;display:flex;align-items:center;gap:8px">
       <span style="font-size:11px;color:var(--mu);font-weight:700;min-width:36px">飲水</span>
-      <span class="hvi"><span class="hvlbl">今日合計</span><span class="hvval">💧 ${totalWater} cc</span></span>
+      <span class="hvi"><span class="hvlbl">今日合計</span><span class="hvval">💧 ${storedWater} cc</span></span>
     </div>` : '';
 
     // 備註：合併所有這天的備註
@@ -2054,8 +2114,8 @@ function renderHistory(){
       renderHistory(); showToast('已刪除整天紀錄');
       return;
     }
-    // 刪除單筆
-    const btn=e.target.closest('.hdelbtn');
+    // 刪除單筆（排除整天刪除按鈕）
+    const btn=e.target.closest('.hdelbtn:not(.del-day-btn)');
     if(!btn)return;
     hap.warn();
     if(!confirm('確定刪除這筆紀錄？'))return;
