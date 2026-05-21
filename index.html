@@ -2016,6 +2016,7 @@ function renderHistory(){
         ${allNotes ? `<div class="hnote" style="margin-top:8px">${allNotes}</div>` : ''}
       </div>
       ${eduChipsHtml}
+      <button class="hdelbtn del-day-btn" data-day="${day}">🗑️ 刪除整天紀錄</button>
     </div>`;
   }).join('');
 
@@ -2042,7 +2043,18 @@ function renderHistory(){
       setTimeout(()=>document.getElementById('eduSheet').classList.add('open'),10);
       return;
     }
-    // 刪除按鈕
+    // 刪除整天
+    const dayBtn=e.target.closest('.del-day-btn');
+    if(dayBtn){
+      hap.warn();
+      const day=dayBtn.dataset.day;
+      if(!confirm('確定刪除「'+day+'」的所有紀錄？')) return;
+      records=records.filter(r=>new Date(r.ts).toDateString()!==new Date(day).toDateString());
+      localStorage.setItem('chemoV5',JSON.stringify(records));
+      renderHistory(); showToast('已刪除整天紀錄');
+      return;
+    }
+    // 刪除單筆
     const btn=e.target.closest('.hdelbtn');
     if(!btn)return;
     hap.warn();
@@ -2847,7 +2859,7 @@ function showSummary(){
     )}
     ${row('💬','整體心情',dominantMood>=0?`多數感覺「${moodLabels[dominantMood]}」`:'未記錄')}
     <div style="margin-top:14px;font-size:11px;color:var(--mu);line-height:1.6;padding-top:10px;border-top:1px solid #f0f4f8">
-      本摘要依病人自填資料自動整理，僅供回診參考，詳情請依主治醫師判斷。
+      本摘要依病人自填資料自動整理，僅供回診參考，請依主治醫師判斷。
     </div>
   `;
 
