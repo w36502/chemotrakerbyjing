@@ -2076,7 +2076,7 @@ function renderHistory(){
         ${allNotes ? `<div class="hnote" style="margin-top:8px">${allNotes}</div>` : ''}
       </div>
       ${eduChipsHtml}
-      <button class="hdelbtn del-day-btn" data-day="${day}">🗑️ 刪除整天紀錄</button>
+      <button class="hdelbtn del-day-btn" data-ts="${entries[0].r.ts}">🗑️ 刪除整天紀錄</button>
     </div>`;
   }).join('');
 
@@ -2103,25 +2103,24 @@ function renderHistory(){
       setTimeout(()=>document.getElementById('eduSheet').classList.add('open'),10);
       return;
     }
-    // 刪除整天
     const dayBtn=e.target.closest('.del-day-btn');
     if(dayBtn){
       hap.warn();
-      const day=dayBtn.dataset.day;
-      // 顯示確認按鈕（confirm() 在 iframe 可能被封鎖）
+      const ts=parseInt(dayBtn.dataset.ts);
+      const targetDay=new Date(ts).toDateString();
       const existing=document.getElementById('confirmDel');
       if(existing) existing.remove();
       const box=document.createElement('div');
       box.id='confirmDel';
       box.style.cssText='position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#1a2332;color:#fff;border-radius:14px;padding:14px 20px;z-index:300;display:flex;flex-direction:column;gap:10px;align-items:center;box-shadow:0 4px 20px rgba(0,0,0,.4);font-family:Noto Sans TC,sans-serif;min-width:260px';
-      box.innerHTML=`<div style="font-size:14px;font-weight:700">確定刪除「${day}」所有紀錄？</div>
+      box.innerHTML=`<div style="font-size:14px;font-weight:700">確定刪除整天紀錄？</div>
         <div style="display:flex;gap:10px;width:100%">
           <button onclick="document.getElementById('confirmDel').remove()" style="flex:1;padding:10px;border:none;border-radius:10px;background:#4a5568;color:#fff;font-size:14px;cursor:pointer">取消</button>
           <button id="confirmDelBtn" style="flex:1;padding:10px;border:none;border-radius:10px;background:#dc2626;color:#fff;font-size:14px;font-weight:700;cursor:pointer">確定刪除</button>
         </div>`;
       document.body.appendChild(box);
       document.getElementById('confirmDelBtn').onclick=()=>{
-        records=records.filter(r=>new Date(r.ts).toDateString()!==new Date(day).toDateString());
+        records=records.filter(r=>new Date(r.ts).toDateString()!==targetDay);
         localStorage.setItem('chemoV5',JSON.stringify(records));
         box.remove();
         renderHistory(); showToast('已刪除整天紀錄');
