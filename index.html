@@ -2120,8 +2120,22 @@ function renderHistory(){
         </div>`;
       document.body.appendChild(box);
       document.getElementById('confirmDelBtn').onclick=()=>{
+        const isToday = targetDay === new Date().toDateString();
         records=records.filter(r=>new Date(r.ts).toDateString()!==targetDay);
         localStorage.setItem('chemoV5',JSON.stringify(records));
+        // 如果刪的是今天，清除症狀心情顯示
+        if(isToday){
+          symGrades={}; renderSymptoms(); updateEduSummary();
+          moodIdx=null;
+          for(let i=0;i<5;i++){const b=document.getElementById('mf'+i);if(b)b.className='mbtn';}
+          painFaceIdx=null; nrsVal=null;
+          for(let i=0;i<6;i++){const b=document.getElementById('pf'+i);if(b)b.className='fbtn';}
+          for(let i=0;i<=10;i++){const b=document.getElementById('nb'+i);if(b)b.className='nbtn';}
+          document.getElementById('painResult').classList.remove('show');
+          waterTotal=0; lastSavedWater=0; updateWaterUI();
+          todayRecIdx=-1;
+          updateFloatSave(); updateBadge();
+        }
         box.remove();
         renderHistory(); showToast('已刪除整天紀錄');
       };
