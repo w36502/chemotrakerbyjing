@@ -513,8 +513,8 @@ canvas{max-height:200px}
 
 
 <div class="tabs" id="tabsBar">
-  <button class="tab active" onclick="switchTab('form')">📋 快速記錄</button>
-  <button class="tab" onclick="switchTab('detail')">📝 詳細記錄</button>
+  <button class="tab active" onclick="switchTab('form')">📋 症狀紀錄</button>
+  <button class="tab" onclick="switchTab('detail')">🩺 生命徵象</button>
   <button class="tab" onclick="switchTab('history')">📁 我的紀錄<span class="tdot" id="histDot"></span></button>
   <button class="tab" onclick="switchTab('report')">📊 數據</button>
 </div>
@@ -549,20 +549,6 @@ canvas{max-height:200px}
     <div class="edu-summary" id="eduSummary">
       <div class="edu-summary-title">📚 居家衛教資訊 <span style="font-size:11px;font-weight:400;color:var(--primary)">點擊查看詳細建議</span></div>
       <div class="edu-chips" id="eduChips"></div>
-    </div>
-
-    <!-- 4. PAIN -->
-    <div class="sh"><span class="sh-icon">💢</span><span class="sh-title">疼痛評估</span><div class="sh-line"></div></div>
-    <div class="card">
-      <div class="sublbl">Wong-Baker 臉譜量表 <small>點選任一同步更新</small></div>
-      <div class="frow" id="painFaceRow"></div>
-      <div class="nrs-sep">── 或直接點選數字 ──</div>
-      <div class="nrow" id="nrsRow"></div>
-      <div class="nrs-desc"><span>無痛</span><span>輕度</span><span>中度</span><span>重度</span><span>最痛</span></div>
-      <div class="pain-result" id="painResult"></div>
-      <div class="flabel" style="margin-top:10px">疼痛部位（選填）</div>
-      <input class="ftarea" id="painLocation" type="text" placeholder="例如：右腹部、注射部位、頭部…" style="min-height:auto;padding:10px 13px;border-radius:10px;font-size:14px" oninput="saveDraft();updateFloatSave()">
-      <button class="clear-btn" onclick="clearPain()">↺ 清除重填</button>
     </div>
 
     <button class="savebtn" onclick="saveRecord()" style="display:none" aria-hidden="true"></button>
@@ -667,26 +653,18 @@ canvas{max-height:200px}
     </div>
     <button class="clear-btn" onclick="clearDetailVitals()">↺ 清除生命徵象重填</button>
 
-    <!-- 飲水量 -->
-    <div class="sh"><span class="sh-icon">💧</span><span class="sh-title">今日飲水量</span><div class="sh-line"></div></div>
-    <div class="water-card">
-      <div class="water-title">
-        <span>💧 飲水紀錄</span>
-        <span class="water-goal">目標：2000cc/天</span>
-      </div>
-      <div class="water-display">
-        <span class="water-amount" id="waterAmt">0</span>
-        <span class="water-unit">cc</span>
-      </div>
-      <div class="water-bar-wrap">
-        <div class="water-bar" id="waterBar" style="width:0%"></div>
-      </div>
-      <div class="water-btns">
-        <button class="water-btn" onclick="addWater(100)">+100</button>
-        <button class="water-btn" onclick="addWater(250)">+250</button>
-        <button class="water-btn" onclick="addWater(500)">+500</button>
-        <button class="water-reset" onclick="resetWater()">歸零</button>
-      </div>
+    <!-- 疼痛評估 -->
+    <div class="sh"><span class="sh-icon">💢</span><span class="sh-title">疼痛評估</span><div class="sh-line"></div></div>
+    <div class="card">
+      <div class="sublbl">Wong-Baker 臉譜量表 <small>點選任一同步更新</small></div>
+      <div class="frow" id="painFaceRow"></div>
+      <div class="nrs-sep">── 或直接點選數字 ──</div>
+      <div class="nrow" id="nrsRow"></div>
+      <div class="nrs-desc"><span>無痛</span><span>輕度</span><span>中度</span><span>重度</span><span>最痛</span></div>
+      <div class="pain-result" id="painResult"></div>
+      <div class="flabel" style="margin-top:10px">疼痛部位（選填）</div>
+      <input class="ftarea" id="painLocation" type="text" placeholder="例如：右腹部、注射部位、頭部…" style="min-height:auto;padding:10px 13px;border-radius:10px;font-size:14px" oninput="saveDraft();updateFloatSave()">
+      <button class="clear-btn" onclick="clearPain()">↺ 清除重填</button>
     </div>
 
     <!-- 飲食備註 -->
@@ -789,7 +767,7 @@ canvas{max-height:200px}
 </div>
 
 <!-- FLOATING SAVE BAR (only visible on form tab) -->
-<div class="float-save-bar" id="floatSaveBar">
+<div class="float-save-bar hidden" id="floatSaveBar">
   <button class="float-save-btn" id="floatSaveBtn" onclick="saveRecord()">
     <span class="float-save-icon">💾</span>
     <span>儲存今日紀錄</span>
@@ -799,8 +777,8 @@ canvas{max-height:200px}
 
 <!-- BOTTOM NAV -->
 <div class="bnav">
-  <button class="nitem active" id="nav-form" onclick="switchTab('form')"><span class="ni">📋</span>快速記錄</button>
-  <button class="nitem" id="nav-detail" onclick="switchTab('detail')"><span class="ni">📝</span>詳細記錄</button>
+  <button class="nitem active" id="nav-form" onclick="switchTab('form')"><span class="ni">📋</span>症狀紀錄</button>
+  <button class="nitem" id="nav-detail" onclick="switchTab('detail')"><span class="ni">🩺</span>生命徵象</button>
   <button class="nitem" id="nav-history" onclick="switchTab('history')"><span class="ni">📁</span>我的紀錄<span class="nbadge" id="navBadge"></span></button>
   <button class="nitem" id="nav-report" onclick="switchTab('report')"><span class="ni">📊</span>數據</button>
 </div>
@@ -1032,13 +1010,11 @@ function pickPainFace(i){
   const mid=Math.round((FACE2NRS[i][0]+FACE2NRS[i][1])/2);
   setPain(i,mid);
   updateFloatSave();
-  autoSaveQuick();
 }
 function pickNRS(n){
   hap.select();
   setPain(NRS2FACE(n),n);
   updateFloatSave();
-  autoSaveQuick();
 }
 
 // ─── MOOD ────────────────────────────────────────────────
@@ -1070,15 +1046,11 @@ function autoSaveQuick(){
   if(todayIdx>=0){
     records[todayIdx].moodIdx = moodIdx;
     records[todayIdx].syms = syms;
-    records[todayIdx].nrsVal = nrsVal;
-    records[todayIdx].painFaceIdx = painFaceIdx;
-    records[todayIdx].painLocation = painLoc;
   } else {
     records.unshift({
       ts: Date.now(),
       moodIdx, syms,
-      nrsVal, painFaceIdx,
-      painLocation: painLoc,
+      nrsVal:null, painFaceIdx:null, painLocation:'',
       temp:'', hr:'', bpS:'', bpD:'', spo2:'', weight:'',
       water:0, diet:'', other:'',
     });
@@ -1344,11 +1316,14 @@ function resetWater(){
 }
 
 function updateWaterUI(){
-  document.getElementById('waterAmt').textContent = waterTotal;
-  const pct = Math.min(100, Math.round(waterTotal / WATER_GOAL * 100));
-  document.getElementById('waterBar').style.width = pct + '%';
+  const amt = document.getElementById('waterAmt');
   const bar = document.getElementById('waterBar');
-  bar.style.background = pct >= 100 ? '#86efac' : '#fff';
+  if(amt) amt.textContent = waterTotal;
+  if(bar){
+    const pct = Math.min(100, Math.round(waterTotal / WATER_GOAL * 100));
+    bar.style.width = pct + '%';
+    bar.style.background = pct >= 100 ? '#86efac' : '#fff';
+  }
 }
 
 // ─── CHART.JS TREND ──────────────────────────────────────
