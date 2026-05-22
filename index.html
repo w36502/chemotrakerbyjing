@@ -533,30 +533,6 @@ canvas{max-height:200px}
       <button class="clear-btn" onclick="clearMood()">↺ 清除重填</button>
     </div>
 
-    <!-- 2. TEMP ONLY -->
-    <div class="sh"><span class="sh-icon">🌡️</span><span class="sh-title">體溫</span><div class="sh-line"></div></div>
-    <div class="fever-urgent" id="feverUrgent">
-      <div class="fever-urgent-title">🚨 發燒警示 — 化療病人發燒需立即評估</div>
-      體溫 ≥38°C 可能為發燒性嗜中性白血球低下症（Febrile Neutropenia），具生命威脅，請立即前往急診或聯繫主治醫師，切勿等待觀察。
-    </div>
-    <div class="g4warn" id="vitalWarn" style="background:var(--dangerl);border-color:var(--danger);color:var(--danger)"></div>
-    <div class="g4warn" id="vitalWarnMild" style="background:var(--warnl);border-color:var(--warn);color:var(--warn)"></div>
-    <div class="vcell s2" style="background:var(--sur);border:1px solid var(--bdr);border-radius:var(--r);padding:14px">
-      <div class="vlbl">🌡️ 體溫 Temperature</div>
-      <div class="vstep">
-        <button class="step-btn" onclick="stepVal('tempVal',-0.1,34,42)">−</button>
-        <div class="step-inp-wrap">
-          <div class="vrow">
-            <input class="vinp" id="tempVal" type="text" inputmode="decimal" placeholder="36.5" oninput="autoFormatTemp(this);evalVitals();saveDraft();updateFloatSave()" onblur="blurClampTemp(this)">
-            <span class="vunit">°C</span>
-          </div>
-          <span class="vst st-hide" id="tempSt"></span>
-        </div>
-        <button class="step-btn" onclick="stepVal('tempVal',0.1,34,42)">＋</button>
-      </div>
-    </div>
-    <button class="clear-btn" onclick="clearTemp()">↺ 清除體溫重填</button>
-
     <!-- 3. SYMPTOMS -->
     <div class="sh"><span class="sh-icon">📊</span><span class="sh-title">CTCAE v5.0 症狀分級</span><div class="sh-line"></div></div>
     <div class="g4warn" id="g4Warning">⚠️ 偵測到 Grade 4 症狀，請尋求醫療人員協助！</div>
@@ -597,8 +573,31 @@ canvas{max-height:200px}
 
     <!-- 生命徵象（心跳、血壓、血氧、體重） -->
     <div class="sh"><span class="sh-icon">🌡️</span><span class="sh-title">生命徵象及體重</span><div class="sh-line"></div></div>
+
+    <!-- 發燒警示 -->
+    <div class="fever-urgent" id="feverUrgent">
+      <div class="fever-urgent-title">🚨 發燒警示 — 化療病人發燒需立即評估</div>
+      體溫 ≥38°C 可能為發燒性嗜中性白血球低下症（Febrile Neutropenia），具生命威脅，請立即前往急診或聯繫主治醫師，切勿等待觀察。
+    </div>
+    <div class="g4warn" id="vitalWarn" style="background:var(--dangerl);border-color:var(--danger);color:var(--danger)"></div>
+    <div class="g4warn" id="vitalWarnMild" style="background:var(--warnl);border-color:var(--warn);color:var(--warn)"></div>
+
     <div class="vgrid" style="grid-template-columns:1fr">
-      <!-- 血壓 -->
+      <!-- 體溫 -->
+      <div class="vcell">
+        <div class="vlbl">🌡️ 體溫 Temperature</div>
+        <div class="vstep">
+          <button class="step-btn" onclick="stepVal('tempVal',-0.1,34,42)">−</button>
+          <div class="step-inp-wrap">
+            <div class="vrow">
+              <input class="vinp" id="tempVal" type="text" inputmode="decimal" placeholder="36.5" oninput="autoFormatTemp(this);evalVitals();saveDraft();updateFloatSave()" onblur="blurClampTemp(this)">
+              <span class="vunit">°C</span>
+            </div>
+            <span class="vst st-hide" id="tempSt"></span>
+          </div>
+          <button class="step-btn" onclick="stepVal('tempVal',0.1,34,42)">＋</button>
+        </div>
+      </div>
       <div class="vcell">
         <div class="vlbl">🩸 血壓 BP</div>
         <div class="vstep" style="margin-bottom:4px">
@@ -1066,25 +1065,21 @@ function autoSaveQuick(){
   const todayIdx = records.findIndex(r=>new Date(r.ts).toDateString()===today);
   const syms = SYMPTOMS.filter(s=>(symGrades[s.id]?.grade??0)>0)
     .map(s=>({icon:s.icon,name:s.name,grade:symGrades[s.id].grade,note:symGrades[s.id].note||''}));
-  const temp = document.getElementById('tempVal')?.value||'';
   const painLoc = document.getElementById('painLocation')?.value||'';
 
   if(todayIdx>=0){
-    // 更新今天的第一筆
     records[todayIdx].moodIdx = moodIdx;
     records[todayIdx].syms = syms;
     records[todayIdx].nrsVal = nrsVal;
     records[todayIdx].painFaceIdx = painFaceIdx;
     records[todayIdx].painLocation = painLoc;
-    if(temp) records[todayIdx].temp = temp;
   } else {
-    // 今天第一次，新增一筆
     records.unshift({
       ts: Date.now(),
       moodIdx, syms,
       nrsVal, painFaceIdx,
       painLocation: painLoc,
-      temp, hr:'', bpS:'', bpD:'', spo2:'', weight:'',
+      temp:'', hr:'', bpS:'', bpD:'', spo2:'', weight:'',
       water:0, diet:'', other:'',
     });
     todayRecIdx = 0;
@@ -1142,7 +1137,6 @@ function blurClampTemp(el){
   }
   evalVitals();
   saveDraft();
-  if(el.value) autoSaveQuick();
 }
 
 // ─── WEIGHT AUTO-FORMAT ──────────────────────────────────
@@ -1258,12 +1252,16 @@ function clearDraft(){
 // ─── SECTION CLEAR FUNCTIONS ─────────────────────────────
 function clearDetailVitals(){
   hap.light();
-  ['hrVal','bpSys','bpDia','spo2Val','weightVal'].forEach(id=>{
+  ['tempVal','hrVal','bpSys','bpDia','spo2Val','weightVal'].forEach(id=>{
     const el=document.getElementById(id); if(el) el.value='';
   });
-  ['hrSt','bpSt','spo2St','weightSt'].forEach(id=>{
+  ['tempSt','hrSt','bpSt','spo2St','weightSt'].forEach(id=>{
     const el=document.getElementById(id); if(el) el.className='vst st-hide';
   });
+  document.getElementById('feverUrgent').classList.remove('show');
+  const spo2Warn=document.getElementById('spo2Urgent');if(spo2Warn)spo2Warn.style.display='none';
+  const vw=document.getElementById('vitalWarn');if(vw){vw.textContent='';vw.classList.remove('show');}
+  const vmw=document.getElementById('vitalWarnMild');if(vmw){vmw.textContent='';vmw.classList.remove('show');}
   updateFloatSave();saveDraft();
   showToast('生命徵象已清除');
 }
